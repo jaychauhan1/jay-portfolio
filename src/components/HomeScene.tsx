@@ -26,7 +26,17 @@ function ChaoticCamera() {
   return null;
 }
 
-function StickerTile() {
+function StickerTile({
+  position,
+  color,
+  route,
+  scale = 1,
+}: {
+  position: [number, number, number];
+  color: string;
+  route: string;
+  scale?: number;
+}) {
   const groupRef = useRef<Group>(null);
   const topRef = useRef<Mesh>(null);
   const router = useRouter();
@@ -60,12 +70,17 @@ function StickerTile() {
 
   useFrame((state) => {
     const t = state.clock.getElapsedTime();
+    const seed = position[0] * 10 + position[1] * 7;
 
     if (groupRef.current) {
-      groupRef.current.position.y = Math.sin(t * 1.3) * 0.12;
-      groupRef.current.rotation.x = Math.cos(t * 0.7) * 0.25;
-      groupRef.current.rotation.y = Math.sin(t * 0.8) * 0.35;
-      groupRef.current.rotation.z = Math.sin(t * 0.9) * 0.2;
+      groupRef.current.position.x =
+        position[0] + Math.cos(t * 1.1 + seed) * 0.06;
+      groupRef.current.position.y =
+        position[1] + Math.sin(t * 1.3 + seed) * 0.12;
+
+      groupRef.current.rotation.x = Math.cos(t * 0.7 + seed) * 0.25;
+      groupRef.current.rotation.y = Math.sin(t * 0.8 + seed) * 0.35;
+      groupRef.current.rotation.z = Math.sin(t * 0.9 + seed) * 0.2;
     }
 
     if (topRef.current) {
@@ -74,7 +89,7 @@ function StickerTile() {
   });
 
   return (
-    <group ref={groupRef} position={[0, 0, 0]}>
+    <group ref={groupRef} position={position} scale={scale}>
       {/* Shadow */}
       <mesh position={[0.15, -0.15, -0.4]}>
         <extrudeGeometry args={[shape, extrudeSettings]} />
@@ -91,13 +106,13 @@ function StickerTile() {
       <mesh
         ref={topRef}
         position={[0, 0, 0]}
-        onClick={() => router.push("/projects")}
+        onClick={() => router.push(route)}
         onPointerOver={() => (document.body.style.cursor = "pointer")}
         onPointerOut={() => (document.body.style.cursor = "default")}
       >
         <extrudeGeometry args={[shape, extrudeSettings]} />
         <meshStandardMaterial
-          color={"#00e5ff"}
+          color={color}
           roughness={0.35}
           metalness={0.05}
         />
@@ -125,7 +140,38 @@ export default function HomeScene() {
         <directionalLight position={[5, 5, 5]} intensity={1.2} />
 
         <ChaoticCamera />
-        <StickerTile />
+
+        {/* Main nav stickers */}
+        <StickerTile
+          position={[-1.15, 0.45, 0]}
+          color="#00e5ff"
+          route="/projects"
+          scale={1.15}
+        />
+        <StickerTile
+          position={[1.35, -0.55, 0]}
+          color="#ff3bf7"
+          route="/blog"
+          scale={1.05}
+        />
+        <StickerTile
+          position={[-0.25, -1.05, 0]}
+          color="#ffe600"
+          route="/about"
+          scale={0.95}
+        />
+        <StickerTile
+          position={[0.85, 0.95, 0]}
+          color="#00ff6a"
+          route="/contact"
+          scale={0.85}
+        />
+        <StickerTile
+          position={[2.1, 0.25, 0]}
+          color="#9b5cff"
+          route="/resume.pdf"
+          scale={0.7}
+        />
       </Canvas>
     </div>
   );
