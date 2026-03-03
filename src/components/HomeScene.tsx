@@ -2,6 +2,7 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import type { Group, Mesh } from "three";
 
 function ChaoticCamera() {
@@ -28,8 +29,8 @@ function ChaoticCamera() {
 function StickerTile() {
   const groupRef = useRef<Group>(null);
   const topRef = useRef<Mesh>(null);
+  const router = useRouter();
 
-  // Slightly irregular sticker outline (2D shape points)
   const shapePoints = useMemo(
     () => [
       [-1.2, 0.8],
@@ -44,56 +45,68 @@ function StickerTile() {
     []
   );
 
+  const shape = useMemo(() => pointsToShape(shapePoints), [shapePoints]);
+
+  const extrudeSettings = useMemo(
+    () => ({
+      depth: 0.28,
+      bevelEnabled: true,
+      bevelThickness: 0.06,
+      bevelSize: 0.06,
+      bevelSegments: 2,
+    }),
+    []
+  );
+
   useFrame((state) => {
     const t = state.clock.getElapsedTime();
+
     if (groupRef.current) {
-      // Chaotic idle motion
       groupRef.current.position.y = Math.sin(t * 1.3) * 0.12;
-      groupRef.current.rotation.z = Math.sin(t * 0.9) * 0.12;
-      groupRef.current.rotation.x = Math.cos(t * 0.7) * 0.08;
-      groupRef.current.rotation.y = Math.sin(t * 0.8) * 0.12;
+      groupRef.current.rotation.x = Math.cos(t * 0.7) * 0.25;
+      groupRef.current.rotation.y = Math.sin(t * 0.8) * 0.35;
+      groupRef.current.rotation.z = Math.sin(t * 0.9) * 0.2;
     }
 
     if (topRef.current) {
-      // Gentle shimmer by micro-rotations
       topRef.current.rotation.z = Math.sin(t * 2.4) * 0.02;
     }
   });
 
-  // We’ll build the “thick sticker” using stacked shapes:
-  // - bottom (shadow)
-  // - middle (black outline)
-  // - top (color face)
-  // For now, we approximate with 3 extruded layers using simple geometry.
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
-      {/* Shadow slab */}
-      <mesh position={[0.08, -0.08, -0.15]}>
-        <shapeGeometry args={[pointsToShape(shapePoints)]} />
-        <meshBasicMaterial color={"#000000"} />
+      {/* Shadow */}
+      <mesh position={[0.15, -0.15, -0.4]}>
+        <extrudeGeometry args={[shape, extrudeSettings]} />
+        <meshStandardMaterial color={"#000000"} roughness={0.95} />
       </mesh>
 
-      {/* Outline slab */}
-      <mesh position={[0, 0, -0.1]}>
-        <shapeGeometry args={[pointsToShape(shapePoints)]} />
-        <meshBasicMaterial color={"#000000"} />
+      {/* Outline */}
+      <mesh position={[0, 0, -0.2]}>
+        <extrudeGeometry args={[shape, extrudeSettings]} />
+        <meshStandardMaterial color={"#000000"} roughness={0.7} />
       </mesh>
 
       {/* Face */}
-      <mesh ref={topRef} position={[0, 0, 0]}>
-        <shapeGeometry args={[pointsToShape(shapePoints)]} />
-        <meshBasicMaterial color={"#00e5ff"} />
+      <mesh
+        ref={topRef}
+        position={[0, 0, 0]}
+        onClick={() => router.push("/projects")}
+        onPointerOver={() => (document.body.style.cursor = "pointer")}
+        onPointerOut={() => (document.body.style.cursor = "default")}
+      >
+        <extrudeGeometry args={[shape, extrudeSettings]} />
+        <meshStandardMaterial
+          color={"#00e5ff"}
+          roughness={0.35}
+          metalness={0.05}
+        />
       </mesh>
     </group>
   );
 }
 
-/**
- * Converts 2D points into a THREE.Shape.
- * We do it here inline to keep the file self-contained.
- */
 function pointsToShape(points: Array<[number, number]>) {
-  // Lazy import to avoid adding extra imports at top; Next handles fine.
   const THREE = require("three") as typeof import("three");
   const shape = new THREE.Shape();
   shape.moveTo(points[0][0], points[0][1]);
@@ -108,8 +121,8 @@ export default function HomeScene() {
   return (
     <div className="w-full h-[calc(100vh-57px)] bg-black">
       <Canvas camera={{ position: [2.5, 2.2, 2.8] }}>
-        <ambientLight intensity={0.7} />
-        <directionalLight position={[5, 5, 5]} intensity={1} />
+        <ambientLight intensity={0.8} />
+        <directionalLight position={[5, 5, 5]} intensity={1.2} />
 
         <ChaoticCamera />
         <StickerTile />
