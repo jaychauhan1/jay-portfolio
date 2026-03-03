@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Group, Mesh } from "three";
 
@@ -40,6 +40,7 @@ function StickerTile({
   const groupRef = useRef<Group>(null);
   const topRef = useRef<Mesh>(null);
   const router = useRouter();
+  const [hovered, setHovered] = useState(false);
 
   const shapePoints = useMemo(
     () => [
@@ -73,14 +74,29 @@ function StickerTile({
     const seed = position[0] * 10 + position[1] * 7;
 
     if (groupRef.current) {
-      groupRef.current.position.x =
-        position[0] + Math.cos(t * 1.1 + seed) * 0.06;
-      groupRef.current.position.y =
-        position[1] + Math.sin(t * 1.3 + seed) * 0.12;
+      // base float
+      const baseX = position[0] + Math.cos(t * 1.1 + seed) * 0.06;
+      const baseY = position[1] + Math.sin(t * 1.3 + seed) * 0.12;
 
-      groupRef.current.rotation.x = Math.cos(t * 0.7 + seed) * 0.25;
-      groupRef.current.rotation.y = Math.sin(t * 0.8 + seed) * 0.35;
-      groupRef.current.rotation.z = Math.sin(t * 0.9 + seed) * 0.2;
+      // hover pop
+      const popZ = hovered ? 0.35 : 0;
+
+      // base wobble
+      const wobbleX = Math.cos(t * 0.7 + seed) * 0.25;
+      const wobbleY = Math.sin(t * 0.8 + seed) * 0.35;
+      const wobbleZ = Math.sin(t * 0.9 + seed) * 0.2;
+
+      // extra hover tilt
+      const hoverTiltX = hovered ? -0.25 : 0;
+      const hoverTiltY = hovered ? 0.35 : 0;
+
+      groupRef.current.position.x += (baseX - groupRef.current.position.x) * 0.12;
+      groupRef.current.position.y += (baseY - groupRef.current.position.y) * 0.12;
+      groupRef.current.position.z += (popZ - groupRef.current.position.z) * 0.18;
+
+      groupRef.current.rotation.x += (wobbleX + hoverTiltX - groupRef.current.rotation.x) * 0.12;
+      groupRef.current.rotation.y += (wobbleY + hoverTiltY - groupRef.current.rotation.y) * 0.12;
+      groupRef.current.rotation.z += (wobbleZ - groupRef.current.rotation.z) * 0.12;
     }
 
     if (topRef.current) {
@@ -102,13 +118,19 @@ function StickerTile({
         <meshStandardMaterial color={"#000000"} roughness={0.7} />
       </mesh>
 
-      {/* Face */}
+      {/* Face (hit target) */}
       <mesh
         ref={topRef}
         position={[0, 0, 0]}
         onClick={() => router.push(route)}
-        onPointerOver={() => (document.body.style.cursor = "pointer")}
-        onPointerOut={() => (document.body.style.cursor = "default")}
+        onPointerEnter={() => {
+          setHovered(true);
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerLeave={() => {
+          setHovered(false);
+          document.body.style.cursor = "default";
+        }}
       >
         <extrudeGeometry args={[shape, extrudeSettings]} />
         <meshStandardMaterial
@@ -141,7 +163,6 @@ export default function HomeScene() {
 
         <ChaoticCamera />
 
-        {/* Main nav stickers */}
         <StickerTile
           position={[-1.15, 0.45, 0]}
           color="#00e5ff"
